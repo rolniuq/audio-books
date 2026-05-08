@@ -2,9 +2,6 @@
 # Usage: tilt up (starts all services)
 # Stop: tilt down
 
-# Enable live updates for faster development
-default_registry('gcr.io/your-project')  # Optional: change to your registry
-
 # Use docker-compose (simplest - one command setup)
 docker_compose('./docker-compose.yml')
 
