@@ -1,0 +1,118 @@
+.book-detail-loading,
+.book-detail-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  color: var(--text-secondary);
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-bottom: 24px;
+  transition: all var(--transition-fast);
+}
+
+.back-btn:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.book-header {
+  display: flex;
+  gap: 32px;
+  margin-bottom: 32px;
+}
+
+.book-cover-large {
+  width: 200px;
+  height: 280px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.book-cover-large img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 64px;
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+}
+
+.book-info-large {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.book-title-large {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.book-author-large {
+  font-size: 18px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.book-status-large {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.book-status-large.completed {
+  color: var(--accent-green);
+}
+
+.book-status-large.converting {
+  color: var(--accent-purple);
+}
+
+.book-status-large.failed {
+  color: var(--accent-red);
+}
+
+.conversion-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.conversion-progress span {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+  .book-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .book-cover-large {
+    width: 150px;
+    height: 210px;
+  }
+}
