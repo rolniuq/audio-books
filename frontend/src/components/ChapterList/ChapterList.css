@@ -1,0 +1,17 @@
+/* ChapterList styles */
+.chapter-list {
+  margin-top: 2rem;
+}
+
+.chapter-item {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.chapter-item:hover {
+  background-color: var(--hover-bg);
+}

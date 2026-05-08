@@ -8,7 +8,6 @@ export function useAudioPlayer() {
     currentChapter,
     currentBook,
     isPlaying,
-    currentTime,
     duration,
     volume,
     playbackRate,

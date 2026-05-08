@@ -1,4 +1,4 @@
-import { Chapter } from '../../types';
+import type { Chapter } from '../../types';
 import { playChapter } from '../../store/playerStore';
 import './ChapterList.css';
 

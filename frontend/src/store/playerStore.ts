@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Chapter, Book, PlayerState } from '../types';
+import type { Chapter, Book, PlayerState } from '../types';
 
 interface PersistedState {
   playbackPosition: Record<string, number>;

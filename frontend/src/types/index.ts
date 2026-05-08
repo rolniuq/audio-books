@@ -59,6 +59,10 @@ export interface PlayerState {
   duration: number;
   volume: number;
   playbackRate: number;
+  playbackPosition: Record<string, number>;
+  defaultPlaybackRate: number;
+  defaultVoice: string;
+  theme: 'dark' | 'light';
   setCurrentChapter: (chapter: Chapter | null) => void;
   setCurrentBook: (book: Book | null) => void;
   setIsPlaying: (playing: boolean) => void;
@@ -69,4 +73,11 @@ export interface PlayerState {
   play: () => void;
   pause: () => void;
   togglePlay: () => void;
+  getPlaybackPosition: (chapterId: string) => number;
+  savePlaybackPosition: (chapterId: string, position: number) => void;
+  clearPlaybackPosition: (chapterId: string) => void;
+  setDefaultPlaybackRate: (rate: number) => void;
+  setDefaultVoice: (voice: string) => void;
+  setTheme: (theme: 'dark' | 'light') => void;
+  clearAllData: () => void;
 }

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
-import { Book, BookDetail, Voice, UploadResponse } from '../types';
+import type { Book, BookDetail, Voice, UploadResponse } from '../types';
 
 export const useBooks = () => {
   return useQuery<Book[]>({
