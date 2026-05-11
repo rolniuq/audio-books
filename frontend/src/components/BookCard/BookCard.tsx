@@ -1,4 +1,5 @@
 import type { Book } from '../../types';
+import { ProgressBar } from '../ProgressBar/ProgressBar';
 import './BookCard.css';
 
 interface BookCardProps {
@@ -17,14 +18,13 @@ export function BookCard({ book, onClick }: BookCardProps) {
     }
   };
 
-  const getStatusText = () => {
-    switch (book.status) {
-      case 'new': return 'New';
-      case 'converting': return `${book.progress || 0}%`;
-      case 'completed': return 'Completed';
-      case 'failed': return 'Failed';
-      default: return 'Unknown';
+  const getChapterInfo = () => {
+    if (book.status === 'converting' && book.chapters) {
+      const totalChapters = book.chapters.length;
+      const completedChapters = book.chapters.filter(c => c.status === 'completed').length;
+      return `Chapter ${completedChapters + 1} of ${totalChapters}`;
     }
+    return undefined;
   };
 
   return (
@@ -37,7 +37,7 @@ export function BookCard({ book, onClick }: BookCardProps) {
         )}
         <div className="book-status">
           <span className={`status-badge ${book.status}`}>
-            {getStatusIcon()} {getStatusText()}
+            {getStatusIcon()} {Math.round((book.progress || 0) * 100)}%
           </span>
         </div>
       </div>
@@ -47,12 +47,12 @@ export function BookCard({ book, onClick }: BookCardProps) {
       </div>
       {book.status === 'converting' && (
         <div className="book-progress">
-          <div className="progress-bar">
-            <div 
-              className="progress-bar-fill" 
-              style={{ width: `${book.progress || 0}%` }}
-            />
-          </div>
+          <ProgressBar
+            progress={book.progress || 0}
+            status={book.status}
+            chapterInfo={getChapterInfo()}
+            size="sm"
+          />
         </div>
       )}
     </div>

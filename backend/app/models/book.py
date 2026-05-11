@@ -10,7 +10,7 @@ class Book(Base):
     title = Column(String, nullable=False)
     author = Column(String, default="Unknown")
     language = Column(String, default="vi-VN")
-    voice = Column(String, default="vi-VN-HoaiNeural")
+    voice = Column(String, default="vi-VN-HoaiMyNeural")
     pdf_path = Column(String, nullable=True)
     status = Column(String, default="pending")
     progress = Column(Float, default=0.0)

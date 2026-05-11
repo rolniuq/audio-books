@@ -104,6 +104,28 @@
   color: var(--text-secondary);
 }
 
+.play-all-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.play-all-btn {
+  padding: 10px 20px;
+  background: var(--accent-green);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.play-all-btn:hover {
+  transform: scale(1.05);
+}
+
 @media (max-width: 768px) {
   .book-header {
     flex-direction: column;

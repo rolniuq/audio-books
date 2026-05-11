@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useVoices, useUploadBook, useStartConversion } from '../../hooks/useBooks';
+import { useVoices, useUploadBook, useStartConversion, useProgress } from '../../hooks/useBooks';
 import './UploadModal.css';
 
 interface UploadModalProps {
@@ -15,8 +15,10 @@ export function UploadModal({ isOpen, onClose }: UploadModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [selectedVoice, setSelectedVoice] = useState<string>('');
   const [isDragging, setIsDragging] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadedBookId, setUploadedBookId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const { data: progressData } = useProgress(uploadedBookId);
 
   const defaultVietnameseVoices = [
     { id: 'vi-VN-HoaiNeural', name: 'HoaiNeural (Female)', language: 'vi-VN' },
@@ -68,17 +70,11 @@ export function UploadModal({ isOpen, onClose }: UploadModalProps) {
     if (!file || !selectedVoice) return;
     
     try {
-      setUploadProgress(0);
+      setError(null);
       const result = await uploadMutation.mutateAsync({ file, voiceId: selectedVoice });
-      setUploadProgress(100);
+      setUploadedBookId(result.bookId);
       
       await conversionMutation.mutateAsync(result.bookId);
-      
-      setTimeout(() => {
-        onClose();
-        setFile(null);
-        setUploadProgress(null);
-      }, 1000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
     }
@@ -144,21 +140,22 @@ export function UploadModal({ isOpen, onClose }: UploadModalProps) {
           </select>
         </div>
 
-        {uploadProgress !== null && (
+        {progressData && (
           <div className="upload-progress">
             <div className="progress-bar">
-              <div className="progress-bar-fill" style={{ width: `${uploadProgress}%` }} />
+              <div className="progress-bar-fill" style={{ width: `${progressData.progress}%` }} />
             </div>
-            <span>{uploadProgress}%</span>
+            <span>{progressData.progress}%</span>
+            <span className="progress-status">{progressData.status}</span>
           </div>
         )}
 
         <button
           className="btn btn-primary upload-btn"
           onClick={handleUpload}
-          disabled={!file || !selectedVoice || uploadMutation.isPending}
+          disabled={!file || !selectedVoice || uploadMutation.isPending || !!uploadedBookId}
         >
-          {uploadMutation.isPending ? 'Uploading...' : 'Upload & Convert'}
+          {uploadMutation.isPending ? 'Uploading...' : uploadedBookId ? 'Converting...' : 'Upload & Convert'}
         </button>
       </div>
     </div>

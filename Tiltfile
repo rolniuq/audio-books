@@ -5,6 +5,8 @@
 # Use docker-compose (simplest - one command setup)
 docker_compose('./docker-compose.yml')
 
+# Note: default_registry() is NOT used here as it's incompatible with docker_compose()
+
 # docker-compose automatically handles port forwarding
 # Backend will be available at http://localhost:8000
 # Frontend will be available at http://localhost:3000

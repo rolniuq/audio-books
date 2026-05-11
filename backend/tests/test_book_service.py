@@ -24,7 +24,7 @@ class TestBookService:
         with patch('app.services.book_service.settings') as mock_settings:
             mock_settings.BOOKS_DIR = "/tmp/test_books"
             book = book_service.create_book_from_upload(
-                test_db, file, "Test Book", "Test Author", "vi-VN", "vi-VN-HoaiNeural"
+                test_db, file, "Test Book", "Test Author", "vi-VN", "vi-VN-HoaiMyNeural"
             )
         
         assert book is not None
@@ -41,7 +41,7 @@ class TestBookService:
             title="Delete Test",
             author="Author",
             language="vi-VN",
-            voice="vi-VN-HoaiNeural",
+            voice="vi-VN-HoaiMyNeural",
             pdf_path="/tmp/test.pdf",
             status="pending"
         )
@@ -68,7 +68,7 @@ class TestBookService:
                 title="Retry Test",
                 author="Author",
                 language="vi-VN",
-                voice="vi-VN-HoaiNeural",
+                voice="vi-VN-HoaiMyNeural",
                 status="failed",
                 progress=0.5,
                 error_message="Previous error"
@@ -114,7 +114,7 @@ class TestBookModel:
             title="Test Book",
             author="Test Author",
             language="vi-VN",
-            voice="vi-VN-HoaiNeural",
+            voice="vi-VN-HoaiMyNeural",
             status="pending"
         )
         test_db.add(book)
@@ -132,7 +132,7 @@ class TestBookModel:
             title="Test Book with Chapters",
             author="Author",
             language="vi-VN",
-            voice="vi-VN-HoaiNeural",
+            voice="vi-VN-HoaiMyNeural",
             status="pending"
         )
         test_db.add(book)
@@ -160,7 +160,7 @@ class TestBookModel:
             title="Retry Test Book",
             author="Author",
             language="vi-VN",
-            voice="vi-VN-HoaiNeural",
+            voice="vi-VN-HoaiMyNeural",
             status="pending"
         )
         test_db.add(book)

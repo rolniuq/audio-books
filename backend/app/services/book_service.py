@@ -79,6 +79,8 @@ class BookService:
     def _extract_chapters(self, db: Session, book: Book):
         full_text, chapter_info = self.pdf_service.extract_text_from_pdf(book.pdf_path)
         
+        logger.info(f"PDF extraction complete: {len(full_text)} chars, {len(chapter_info)} chapters")
+        
         chapters = []
         for i, info in enumerate(chapter_info):
             if "start_page" in info:
@@ -90,7 +92,11 @@ class BookService:
             elif "start_pos" in info and "end_pos" in info:
                 text = full_text[info["start_pos"]:info["end_pos"]]
             else:
+                logger.warning(f"Chapter {i+1}: missing position info")
                 continue
+            
+            if not text or not text.strip():
+                logger.warning(f"Chapter {i+1} ('{info.get('title')}'): empty content after extraction")
             
             chapter = Chapter(
                 book_id=book.id,
@@ -120,6 +126,13 @@ class BookService:
             chapter.status = "converting"
             db.commit()
             
+            if not chapter.content or not chapter.content.strip():
+                chapter.status = "skipped"
+                chapter.last_error = "Empty content"
+                db.commit()
+                logger.warning(f"Chapter {chapter.chapter_number} skipped: empty content")
+                continue
+            
             try:
                 audio_path = os.path.join(book_dir, f"chapter_{chapter.chapter_number}.mp3")
                 
@@ -129,11 +142,17 @@ class BookService:
                     db.commit()
                     logger.warning(f"Chapter {chapter.chapter_number} retry {attempt}: {error}")
                 
-                self.tts_service.convert_text_to_audio(
-                    text=chapter.content,
-                    output_path=audio_path,
-                    voice=book.voice,
-                    on_retry=on_retry
+                text_length = len(chapter.content)
+                timeout_seconds = min(600, 60 + text_length // 50)
+                
+                await asyncio.wait_for(
+                    self.tts_service._convert_text_to_audio_async(
+                        text=chapter.content,
+                        output_path=audio_path,
+                        voice=book.voice,
+                        on_retry=on_retry
+                    ),
+                    timeout=timeout_seconds
                 )
                 
                 chapter.audio_path = audio_path
@@ -151,6 +170,12 @@ class BookService:
                 book.updated_at = datetime.utcnow()
                 db.commit()
                 
+            except asyncio.TimeoutError:
+                logger.error(f"Chapter {chapter.chapter_number} timed out after {timeout_seconds}s ({text_length} chars)")
+                chapter.status = "failed"
+                chapter.last_error = f"Timeout after {timeout_seconds}s"
+                db.commit()
+                failed_chapters.append(chapter.chapter_number)
             except Exception as e:
                 logger.error(f"Error converting chapter {chapter.chapter_number}: {str(e)}")
                 chapter.status = "failed"

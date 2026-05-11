@@ -20,6 +20,7 @@ export const usePlayerStore = create<PlayerState & PersistedState>()(
       volume: 1,
       playbackRate: 1,
       playbackPosition: {},
+      chapterQueue: [],
       defaultPlaybackRate: 1,
       defaultVoice: 'vi-VN-HoaiNeural',
       theme: 'dark',
@@ -49,6 +50,17 @@ export const usePlayerStore = create<PlayerState & PersistedState>()(
         const positions = { ...get().playbackPosition };
         delete positions[chapterId];
         set({ playbackPosition: positions });
+      },
+
+      setChapterQueue: (queue: Chapter[]) => set({ chapterQueue: queue }),
+
+      playNextChapter: () => {
+        const { chapterQueue, currentBook } = get();
+        if (chapterQueue.length > 0 && currentBook) {
+          const [nextChapter, ...remaining] = chapterQueue;
+          set({ chapterQueue: remaining });
+          playChapter(nextChapter, currentBook);
+        }
       },
 
       setDefaultPlaybackRate: (rate: number) => set({ defaultPlaybackRate: rate }),
@@ -108,5 +120,16 @@ export const onChapterComplete = () => {
     store.clearPlaybackPosition(chapter.id);
   }
   
-  store.pause();
+  store.playNextChapter();
+};
+
+export const playAll = (chapters: Chapter[], book: Book) => {
+  const completedChapters = chapters.filter(c => c.status === 'completed');
+  if (completedChapters.length === 0) return;
+  
+  const store = usePlayerStore.getState();
+  const [first, ...rest] = completedChapters;
+  
+  store.setChapterQueue(rest);
+  playChapter(first, book);
 };

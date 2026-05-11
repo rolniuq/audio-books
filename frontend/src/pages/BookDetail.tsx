@@ -3,6 +3,7 @@ import { useBook } from '../hooks/useBooks';
 import { Header } from '../components/Layout/Header';
 import { Sidebar } from '../components/Layout/Sidebar';
 import { ChapterList } from '../components/ChapterList/ChapterList';
+import { playAll } from '../store/playerStore';
 import './BookDetail.css';
 
 export function BookDetail() {
@@ -60,13 +61,25 @@ export function BookDetail() {
                     <div className="progress-bar">
                       <div 
                         className="progress-bar-fill" 
-                        style={{ width: `${book.progress || 0}%` }}
+                        style={{ width: `${(book.progress || 0) * 100}%` }}
                       />
                     </div>
-                    <span>{book.progress || 0}% converting...</span>
+                    <span>{Math.round((book.progress || 0) * 100)}% converting...</span>
                   </div>
                 )}
-                {book.status === 'completed' && <span>✅ Ready to play</span>}
+                {book.status === 'completed' && (
+                  <div className="play-all-container">
+                    <span>✅ Ready to play</span>
+                    {book.chapters && book.chapters.some(c => c.status === 'completed') && (
+                      <button 
+                        className="play-all-btn"
+                        onClick={() => playAll(book.chapters!, book)}
+                      >
+                        ▶️ Play All
+                      </button>
+                    )}
+                  </div>
+                )}
                 {book.status === 'failed' && <span>❌ Conversion failed</span>}
                 {book.status === 'new' && <span>📖 New</span>}
               </div>

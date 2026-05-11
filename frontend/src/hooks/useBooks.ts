@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
-import type { Book, BookDetail, Voice, UploadResponse } from '../types';
+import type { Book, BookDetail, Voice, UploadResponse, ProgressResponse } from '../types';
 
 export const useBooks = () => {
   return useQuery<Book[]>({
@@ -60,6 +60,20 @@ export const useStartConversion = () => {
     onSuccess: (_, bookId) => {
       queryClient.invalidateQueries({ queryKey: ['book', bookId] });
       queryClient.invalidateQueries({ queryKey: ['books'] });
+    },
+  });
+};
+
+export const useProgress = (bookId: string | null) => {
+  return useQuery<ProgressResponse>({
+    queryKey: ['progress', bookId],
+    queryFn: () => api.getProgress(bookId!),
+    enabled: !!bookId,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!data) return 2000;
+      if (data.status === 'completed' || data.status === 'failed') return false;
+      return 2000;
     },
   });
 };

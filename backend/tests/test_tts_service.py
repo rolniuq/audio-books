@@ -22,7 +22,7 @@ class TestTTSService:
         voices = tts_service.get_voices()
         assert isinstance(voices, list)
         assert len(voices) > 0
-        assert any(v["name"] == "vi-VN-HoaiNeural" for v in voices)
+        assert any(v["name"] == "vi-VN-HoaiMyNeural" for v in voices)
     
     def test_get_retry_delay_exponential(self, tts_service):
         delay_0 = tts_service._get_retry_delay(0)
@@ -48,7 +48,7 @@ class TestTTSService:
                 mock_communicate.return_value = mock_instance
                 
                 result = await tts_service._synthesize_with_retry(
-                    "Test text", "vi-VN-HoaiNeural", output_path
+                    "Test text", "vi-VN-HoaiMyNeural", output_path
                 )
                 assert result is True
                 mock_instance.save.assert_called_once()
@@ -70,7 +70,7 @@ class TestTTSService:
                 with patch('asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
                     with pytest.raises(Exception) as exc_info:
                         await tts_service._synthesize_with_retry(
-                            "Test text", "vi-VN-HoaiNeural", output_path
+                            "Test text", "vi-VN-HoaiMyNeural", output_path
                         )
                     
                     assert "failed after" in str(exc_info.value)
@@ -95,7 +95,7 @@ class TestTTSService:
                 
                 with patch('asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
                     result = await tts_service._synthesize_with_retry(
-                        "Test text", "vi-VN-HoaiNeural", output_path
+                        "Test text", "vi-VN-HoaiMyNeural", output_path
                     )
                     assert result is True
                     assert mock_instance.save.call_count == 2
@@ -111,7 +111,7 @@ class TestTTSService:
             with patch.object(tts_service, '_synthesize_with_retry', new_callable=AsyncMock) as mock_synth:
                 mock_synth.return_value = True
                 result = tts_service.convert_text_to_audio(
-                    "Short text", output_path, "vi-VN-HoaiNeural"
+                    "Short text", output_path, "vi-VN-HoaiMyNeural"
                 )
                 assert result == output_path
                 mock_synth.assert_called_once()
@@ -131,7 +131,7 @@ class TestTTSService:
             with patch.object(tts_service, '_synthesize_with_retry', new_callable=AsyncMock) as mock_synth:
                 mock_synth.return_value = True
                 tts_service.convert_text_to_audio(
-                    "Short text", output_path, "vi-VN-HoaiNeural", on_retry=on_retry
+                    "Short text", output_path, "vi-VN-HoaiMyNeural", on_retry=on_retry
                 )
         finally:
             if os.path.exists(output_path):

@@ -42,7 +42,8 @@ export function useAudioPlayer() {
     };
 
     const handleEnded = () => {
-      setIsPlaying(false);
+      const { playNextChapter } = usePlayerStore.getState();
+      playNextChapter();
     };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);

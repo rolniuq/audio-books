@@ -7,6 +7,7 @@ export interface Book {
   coverUrl?: string;
   status: BookStatus;
   progress?: number;
+  chapters?: Chapter[];
   createdAt: string;
   updatedAt: string;
 }
@@ -60,6 +61,7 @@ export interface PlayerState {
   volume: number;
   playbackRate: number;
   playbackPosition: Record<string, number>;
+  chapterQueue: Chapter[];
   defaultPlaybackRate: number;
   defaultVoice: string;
   theme: 'dark' | 'light';
@@ -76,6 +78,8 @@ export interface PlayerState {
   getPlaybackPosition: (chapterId: string) => number;
   savePlaybackPosition: (chapterId: string, position: number) => void;
   clearPlaybackPosition: (chapterId: string) => void;
+  setChapterQueue: (queue: Chapter[]) => void;
+  playNextChapter: () => void;
   setDefaultPlaybackRate: (rate: number) => void;
   setDefaultVoice: (voice: string) => void;
   setTheme: (theme: 'dark' | 'light') => void;

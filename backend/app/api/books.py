@@ -1,7 +1,9 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
+from fastapi.exceptions import HTTPException as FastAPIHTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from app.database import get_db
 from app.models.book import Book, Chapter
@@ -19,6 +21,8 @@ from app.services.book_service import BookService
 from app.services.tts_service import TTSService
 from app.config import settings
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 voices_router = APIRouter()
 
@@ -28,23 +32,67 @@ tts_service = TTSService()
 @router.post("/upload", response_model=BookResponse)
 async def upload_book(
     file: UploadFile = File(...),
-    title: str = ...,
+    title: Optional[str] = None,
     author: str = "Unknown",
     language: str = "vi-VN",
-    voice: str = "vi-VN-HoaiNeural",
+    voice: str = "vi-VN-HoaiMyNeural",
+    voice_id: Optional[str] = None,
+    auto_convert: bool = True,
+    background_tasks: BackgroundTasks = None,
     db: Session = Depends(get_db)
 ):
-    if not file.filename.lower().endswith('.pdf'):
-        raise HTTPException(status_code=400, detail="Only PDF files are supported")
-    
-    book = book_service.create_book_from_upload(db, file, title, author, language, voice)
-    
-    return book
+    try:
+        logger.info(f"Upload request: filename={file.filename}, title={title}, voice={voice}, voice_id={voice_id}")
+        
+        if not file.filename.lower().endswith('.pdf'):
+            raise HTTPException(status_code=400, detail="Only PDF files are supported")
+        
+        # Use voice_id if provided
+        if voice_id:
+            voice = voice_id
+        
+        # Use filename as title if not provided
+        if not title:
+            title = file.filename.replace('.pdf', '').replace('.PDF', '')
+        
+        book = book_service.create_book_from_upload(db, file, title, author, language, voice)
+        logger.info(f"Book created successfully: id={book.id}, title={book.title}")
+        
+        if auto_convert and background_tasks:
+            logger.info(f"Auto-converting book {book.id}")
+            book.status = "pending"
+            db.commit()
+            background_tasks.add_task(book_service.convert_book_to_audio, db, book.id)
+        
+        return book
+    except HTTPException as he:
+        raise
+    except Exception as e:
+        logger.error(f"Error in upload_book: {str(e)}", exc_info=True)
+        raise
 
 @router.get("", response_model=BookListResponse)
 def list_books(db: Session = Depends(get_db)):
+    from app.schemas.book import BookListItem
     books = db.query(Book).order_by(Book.created_at.desc()).all()
-    return {"books": books, "total": len(books)}
+    book_items = [
+        {
+            "id": book.id,
+            "title": book.title,
+            "author": book.author,
+            "language": book.language,
+            "voice": book.voice,
+            "pdf_path": book.pdf_path,
+            "status": book.status,
+            "progress": book.progress,
+            "error_message": book.error_message,
+            "created_at": book.created_at,
+            "updated_at": book.updated_at,
+            "chapters": []
+        }
+        for book in books
+    ]
+    return {"books": book_items, "total": len(books)}
 
 @router.get("/{book_id}", response_model=BookResponse)
 def get_book(book_id: int, db: Session = Depends(get_db)):
@@ -52,7 +100,35 @@ def get_book(book_id: int, db: Session = Depends(get_db)):
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
     
-    return book
+    chapters = db.query(Chapter).filter(Chapter.book_id == book_id).order_by(Chapter.chapter_number).all()
+    return {
+        "id": book.id,
+        "title": book.title,
+        "author": book.author,
+        "language": book.language,
+        "voice": book.voice,
+        "pdf_path": book.pdf_path,
+        "status": book.status,
+        "progress": book.progress,
+        "error_message": book.error_message,
+        "created_at": book.created_at,
+        "updated_at": book.updated_at,
+        "chapters": [
+            {
+                "id": ch.id,
+                "chapter_number": ch.chapter_number,
+                "title": ch.title,
+                "content": None,
+                "audio_path": ch.audio_path,
+                "status": ch.status,
+                "duration_seconds": ch.duration_seconds,
+                "retry_count": ch.retry_count,
+                "last_error": ch.last_error,
+                "created_at": ch.created_at
+            }
+            for ch in chapters
+        ]
+    }
 
 @router.delete("/{book_id}")
 def delete_book(book_id: int, db: Session = Depends(get_db)):

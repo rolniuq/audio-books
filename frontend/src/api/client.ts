@@ -1,6 +1,5 @@
 import type {
   Book,
-  BookDetail,
   Voice,
   UploadResponse,
   ProgressResponse,
@@ -37,10 +36,43 @@ async function fetchApi<T>(
   return response.json();
 }
 
-export const api = {
-  getBooks: () => fetchApi<Book[]>('/api/books'),
+const mapStatus = (status: string): Book['status'] => {
+  switch (status) {
+    case 'pending': return 'new';
+    case 'converting': return 'converting';
+    case 'completed': return 'completed';
+    case 'failed': return 'failed';
+    default: return 'new';
+  }
+};
 
-  getBook: (id: string) => fetchApi<BookDetail>(`/api/books/${id}`),
+export const api = {
+  getBooks: async () => {
+    const data = await fetchApi<{books: any[], total: number}>('/api/books');
+    return data.books.map(book => ({
+      ...book,
+      id: String(book.id),
+      status: mapStatus(book.status),
+      createdAt: book.created_at,
+      updatedAt: book.updated_at,
+      chapters: [],
+    }));
+  },
+
+  getBook: async (id: string) => {
+    const data = await fetchApi<any>(`/api/books/${id}`);
+    return {
+      ...data,
+      id: String(data.id),
+      status: mapStatus(data.status),
+      chapters: data.chapters?.map((ch: any) => ({
+        ...ch,
+        id: String(ch.id),
+        bookId: String(data.id),
+        number: ch.chapter_number,
+      })) || [],
+    };
+  },
 
   deleteBook: (id: string) =>
     fetchApi<void>(`/api/books/${id}`, { method: 'DELETE' }),
@@ -60,7 +92,8 @@ export const api = {
       throw new ApiError(response.status, error.detail || 'Upload failed');
     }
 
-    return response.json();
+    const book = await response.json();
+    return { bookId: String(book.id), message: 'Book uploaded successfully' };
   },
 
   startConversion: (bookId: string) =>

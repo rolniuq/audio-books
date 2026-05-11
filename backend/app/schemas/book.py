@@ -21,7 +21,7 @@ class BookCreate(BaseModel):
     title: str
     author: str = "Unknown"
     language: str = "vi-VN"
-    voice: str = "vi-VN-HoaiNeural"
+    voice: str = "vi-VN-HoaiMyNeural"
 
 class BookUpdate(BaseModel):
     title: Optional[str] = None
@@ -46,8 +46,25 @@ class BookResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class BookListItem(BaseModel):
+    id: int
+    title: str
+    author: str
+    language: str
+    voice: str
+    pdf_path: Optional[str] = None
+    status: str
+    progress: float
+    error_message: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    chapters: List[ChapterResponse] = []
+
+    class Config:
+        from_attributes = True
+
 class BookListResponse(BaseModel):
-    books: List[BookResponse]
+    books: List[BookListItem]
     total: int
 
 class BookProgressResponse(BaseModel):

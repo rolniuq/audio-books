@@ -8,6 +8,8 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+TTS_TIMEOUT = 300  # 5 minutes max per chapter
+
 
 class TTSService:
     def __init__(self):
@@ -19,27 +21,60 @@ class TTSService:
     
     def _get_available_voices(self):
         return [
-            {"name": "vi-VN-HoaiNeural", "language": "vi-VN", "gender": "Female"},
+            {"name": "vi-VN-HoaiMyNeural", "language": "vi-VN", "gender": "Female"},
             {"name": "vi-VN-NamMinhNeural", "language": "vi-VN", "gender": "Male"},
             {"name": "en-US-JennyNeural", "language": "en-US", "gender": "Female"},
             {"name": "en-US-GuyNeural", "language": "en-US", "gender": "Male"},
+            {"name": "en-GB-SoniaNeural", "language": "en-GB", "gender": "Female"},
             {"name": "ja-JP-NanamiNeural", "language": "ja-JP", "gender": "Female"},
             {"name": "zh-CN-XiaoxiaoNeural", "language": "zh-CN", "gender": "Female"},
         ]
     
+    def _detect_language(self, text: str) -> str:
+        if not text or len(text) == 0:
+            return "en-US"
+        
+        import re
+        vietnamese_chars = 'àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộùúủũụừứửữựỳýỷỹỵđ'
+        vietnamese_pattern = re.compile(f'[{vietnamese_chars}]', re.IGNORECASE)
+        vi_count = len(vietnamese_pattern.findall(text))
+        total_chars = len(text)
+        
+        if total_chars > 0 and vi_count / total_chars > 0.3:
+            return "vi-VN"
+        return "en-US"
+    
+    def _get_voice_for_text(self, text: str, preferred_voice: str = None) -> str:
+        if preferred_voice:
+            voice_lang = next((v["language"] for v in self.available_voices if v["name"] == preferred_voice), None)
+            if voice_lang:
+                text_lang = self._detect_language(text)
+                if voice_lang == text_lang:
+                    return preferred_voice
+        
+        text_lang = self._detect_language(text)
+        for voice in self.available_voices:
+            if voice["language"] == text_lang:
+                return voice["name"]
+        
+        return preferred_voice or self.available_voices[0]["name"]
+    
     async def _synthesize_text(self, text: str, voice: str, output_file: str, rate: str = "+0%", pitch: str = "+0Hz"):
         communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
-        await communicate.save(output_file)
+        await asyncio.wait_for(communicate.save(output_file), timeout=TTS_TIMEOUT)
     
     async def _synthesize_text_with_progress(self, text: str, voice: str, output_file: str, progress_callback: Optional[Callable] = None):
         communicate = edge_tts.Communicate(text, voice)
         
-        with open(output_file, 'wb') as f:
-            async for chunk in communicate.stream():
-                if chunk["type"] == "audio":
-                    f.write(chunk["data"])
-                    if progress_callback:
-                        progress_callback(len(chunk["data"]))
+        async def stream_with_timeout():
+            with open(output_file, 'wb') as f:
+                async for chunk in communicate.stream():
+                    if chunk["type"] == "audio":
+                        f.write(chunk["data"])
+                        if progress_callback:
+                            progress_callback(len(chunk["data"]))
+        
+        await asyncio.wait_for(stream_with_timeout(), timeout=TTS_TIMEOUT)
     
     def _get_retry_delay(self, attempt: int) -> float:
         delay = self.base_delay * (2 ** attempt)
@@ -51,27 +86,35 @@ class TTSService:
             try:
                 await self._synthesize_text(text, voice, output_file, rate, pitch)
                 return True
+            except asyncio.TimeoutError:
+                last_error = "TTS timeout"
+                logger.error(f"TTS timeout on attempt {attempt + 1}")
+                if attempt < self.max_retries - 1:
+                    delay = self._get_retry_delay(attempt)
+                    logger.warning(f"TTS attempt {attempt + 1} timed out. Retrying in {delay:.1f}s...")
+                    await asyncio.sleep(delay)
             except Exception as e:
                 last_error = str(e)
                 if attempt < self.max_retries - 1:
                     delay = self._get_retry_delay(attempt)
                     logger.warning(f"TTS attempt {attempt + 1} failed: {last_error}. Retrying in {delay:.1f}s...")
-                    asyncio.run(asyncio.sleep(delay))
+                    await asyncio.sleep(delay)
                 else:
                     logger.error(f"TTS failed after {self.max_retries} attempts: {last_error}")
         
         raise Exception(f"TTS failed after {self.max_retries} retries: {last_error}")
     
-    def convert_text_to_audio(
+    async def _convert_text_to_audio_async(
         self,
         text: str,
         output_path: str,
-        voice: str = "vi-VN-HoaiNeural",
+        voice: str = "vi-VN-HoaiMyNeural",
         progress_callback: Optional[Callable] = None,
         on_retry: Optional[Callable[[int, str], None]] = None
     ) -> str:
+        voice = self._get_voice_for_text(text, voice)
         if len(text) <= self.segment_size:
-            asyncio.run(self._synthesize_with_retry(text, voice, output_path))
+            await self._synthesize_with_retry(text, voice, output_path)
             return output_path
         
         segments = self._split_text_into_segments(text)
@@ -80,7 +123,7 @@ class TTSService:
         for i, segment in enumerate(segments):
             temp_file = f"{output_path}.part{i}.mp3"
             try:
-                asyncio.run(self._synthesize_with_retry(segment, voice, temp_file))
+                await self._synthesize_with_retry(segment, voice, temp_file)
             except Exception as e:
                 if on_retry:
                     on_retry(i + 1, str(e))
@@ -97,6 +140,16 @@ class TTSService:
             os.remove(temp_file)
         
         return output_path
+    
+    def convert_text_to_audio(
+        self,
+        text: str,
+        output_path: str,
+        voice: str = "vi-VN-HoaiMyNeural",
+        progress_callback: Optional[Callable] = None,
+        on_retry: Optional[Callable[[int, str], None]] = None
+    ) -> str:
+        return asyncio.run(self._convert_text_to_audio_async(text, output_path, voice, progress_callback, on_retry))
     
     def _split_text_into_segments(self, text: str) -> list:
         sentences = text.replace('. ', '.|').replace('! ', '!|').replace('? ', '?|').split('|')

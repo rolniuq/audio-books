@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     
     MAX_UPLOAD_SIZE: int = 50 * 1024 * 1024
     
-    DEFAULT_VOICE: str = "vi-VN-HoaiNeural"
+    DEFAULT_VOICE: str = "vi-VN-HoaiMyNeural"
     DEFAULT_LANGUAGE: str = "vi-VN"
     
     TTS_SEGMENT_SIZE: int = 5000

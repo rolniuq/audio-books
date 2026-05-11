@@ -111,14 +111,18 @@ class PDFService:
         chunk_size = self.chapter_fallback_words
         chapters = []
         
+        pos = 0
         for i in range(0, len(words), chunk_size):
             chunk = words[i:i + chunk_size]
             title = f"Chapter {len(chapters) + 1}"
+            chunk_text = " ".join(chunk)
+            
             chapters.append({
                 "title": title,
-                "start_pos": 0,
-                "end_pos": len(" ".join(chunk))
+                "start_pos": pos,
+                "end_pos": pos + len(chunk_text)
             })
+            pos += len(chunk_text) + 1
         
         return chapters
     

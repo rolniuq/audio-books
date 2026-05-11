@@ -37,7 +37,7 @@ class TestBooksAPI:
             title="API Test Book",
             author="API Author",
             language="vi-VN",
-            voice="vi-VN-HoaiNeural",
+            voice="vi-VN-HoaiMyNeural",
             status="pending"
         )
         test_db.add(book)
@@ -60,7 +60,7 @@ class TestBooksAPI:
             title="Get Book Test",
             author="Author",
             language="vi-VN",
-            voice="vi-VN-HoaiNeural",
+            voice="vi-VN-HoaiMyNeural",
             status="pending"
         )
         test_db.add(book)
@@ -78,7 +78,7 @@ class TestBooksAPI:
             title="Delete Book Test",
             author="Author",
             language="vi-VN",
-            voice="vi-VN-HoaiNeural",
+            voice="vi-VN-HoaiMyNeural",
             status="pending"
         )
         test_db.add(book)
@@ -116,7 +116,7 @@ class TestBooksAPI:
                 "title": "Uploaded Book",
                 "author": "Test Author",
                 "language": "vi-VN",
-                "voice": "vi-VN-HoaiNeural"
+                "voice": "vi-VN-HoaiMyNeural"
             }
         )
         assert response.status_code == 200
@@ -129,7 +129,7 @@ class TestBooksAPI:
             title="Convert Test Book",
             author="Author",
             language="vi-VN",
-            voice="vi-VN-HoaiNeural",
+            voice="vi-VN-HoaiMyNeural",
             status="pending",
             pdf_path="/tmp/test.pdf"
         )
@@ -151,7 +151,7 @@ class TestBooksAPI:
             title="Progress Test",
             author="Author",
             language="vi-VN",
-            voice="vi-VN-HoaiNeural",
+            voice="vi-VN-HoaiMyNeural",
             status="converting",
             progress=0.5
         )
@@ -184,7 +184,7 @@ class TestVoicesAPI:
         data = response.json()
         assert "voices" in data
         assert len(data["voices"]) > 0
-        assert any(v["name"] == "vi-VN-HoaiNeural" for v in data["voices"])
+        assert any(v["name"] == "vi-VN-HoaiMyNeural" for v in data["voices"])
 
 
 class TestAudioAPI:
@@ -204,7 +204,7 @@ class TestAudioAPI:
             title="Audio Test Book",
             author="Author",
             language="vi-VN",
-            voice="vi-VN-HoaiNeural",
+            voice="vi-VN-HoaiMyNeural",
             status="pending"
         )
         test_db.add(book)
