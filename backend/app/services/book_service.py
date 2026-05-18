@@ -78,9 +78,8 @@ class BookService:
     
     def _extract_chapters(self, db: Session, book: Book):
         full_text, chapter_info = self.pdf_service.extract_text_from_pdf(book.pdf_path)
-        
         logger.info(f"PDF extraction complete: {len(full_text)} chars, {len(chapter_info)} chapters")
-        
+        logger.debug(f"Sample extracted text (first 200 chars): {repr(full_text[:200])}")
         chapters = []
         for i, info in enumerate(chapter_info):
             if "start_page" in info:

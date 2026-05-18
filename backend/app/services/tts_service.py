@@ -30,17 +30,59 @@ class TTSService:
             {"name": "zh-CN-XiaoxiaoNeural", "language": "zh-CN", "gender": "Female"},
         ]
     
+    def _get_vietnamese_ratio(self, text: str) -> float:
+        if not text or len(text) == 0:
+            return 0.0
+        import re
+        vietnamese_chars = 'àáảãạăằắẳẵặâầấẩẫặèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộùúủũụừứửữựỳýỷỹỵđ'
+        vietnamese_pattern = re.compile(f'[{vietnamese_chars}]', re.IGNORECASE)
+        vi_count = len(vietnamese_pattern.findall(text))
+        return vi_count / len(text)
+
+    def _get_corrupted_vietnamese_ratio(self, text: str) -> float:
+        """Detect Vietnamese text that has been corrupted with middle dots (U+00B7)"""
+        if not text or len(text) == 0:
+            return 0.0
+            
+        # Pattern for corrupted Vietnamese: sequences like [a-z]·[a-z] where · replaces diacritics
+        import re
+        # Look for patterns where a letter is followed by a middle dot and another letter
+        # This is characteristic of corrupted Vietnamese text where diacritics became middle dots
+        corrupted_pattern = re.compile(r'[a-zA-Z]·[a-zA-Z]')
+        corrupted_matches = len(corrupted_pattern.findall(text))
+        
+        # Also count actual Vietnamese characters
+        vietnamese_chars = 'àáảãạăằắẳẵặâầấẩẫặèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộùúủũụừứửữựỳýỷỹỵđ'
+        vietnamese_pattern = re.compile(f'[{vietnamese_chars}]', re.IGNORECASE)
+        vi_count = len(vietnamese_pattern.findall(text))
+        
+        # Combine both signals
+        total_score = (vi_count * 2) + corrupted_matches  # Weight actual Vietnamese chars higher
+        return total_score / (len(text) * 2) if len(text) > 0 else 0.0
+
     def _detect_language(self, text: str) -> str:
         if not text or len(text) == 0:
             return "en-US"
         
         import re
-        vietnamese_chars = 'àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộùúủũụừứửữựỳýỷỹỵđ'
+        vietnamese_chars = 'àáảãạăằắẳẵặâầấẩẫặèéẻẹêềếểễệìíỉĩịòóõọôồốổỗộùúủũụừứửữựỳýỷỹỵđ'
         vietnamese_pattern = re.compile(f'[{vietnamese_chars}]', re.IGNORECASE)
         vi_count = len(vietnamese_pattern.findall(text))
         total_chars = len(text)
         
-        if total_chars > 0 and vi_count / total_chars > 0.3:
+        # Log detection info for debugging
+        logger.debug(f"Vietnamese char count: {vi_count}/{total_chars} = {vi_count/total_chars if total_chars > 0 else 0}")
+        
+        # Also check for corrupted Vietnamese text (where diacritics became middle dots)
+        corrupted_ratio = self._get_corrupted_vietnamese_ratio(text)
+        logger.debug(f"Corrupted Vietnamese ratio: {corrupted_ratio}")
+        
+        # Combined detection: either actual Vietnamese chars OR corrupted pattern
+        direct_ratio = vi_count / total_chars if total_chars > 0 else 0
+        combined_ratio = max(direct_ratio, corrupted_ratio)
+        
+        # Lower threshold for better detection of Vietnamese text
+        if total_chars > 0 and combined_ratio > 0.05:  # Even lower threshold to catch corrupted text
             return "vi-VN"
         return "en-US"
     

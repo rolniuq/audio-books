@@ -1,7 +1,10 @@
 import re
 import fitz
+import logging
 from typing import List, Dict, Tuple, Optional
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 class PDFService:
     def __init__(self):
@@ -14,13 +17,70 @@ class PDFService:
             raise ValueError("PDF has no pages")
         
         full_text = ""
-        for page in doc:
-            text = page.get_text()
-            if text.strip():
-                full_text += text + "\n"
+        extraction_methods = ["html", "text", "blocks", "dict"]  # Try HTML first for better Unicode support
+        
+        for page_num, page in enumerate(doc):
+            page_text = ""
+            best_method = None
+            best_text = ""
+            best_score = -1  # higher is better
+            
+            # Try different extraction methods
+            for method in extraction_methods:
+                try:
+                    if method == "text":
+                        text = page.get_text(sort=True)
+                    elif method == "blocks":
+                        blocks = page.get_text("blocks")
+                        text = "\n".join([block[4] for block in blocks if len(block) > 4 and block[4].strip()])
+                    elif method == "dict":
+                        text_dict = page.get_text("dict")
+                        text_blocks = []
+                        for block in text_dict.get("blocks", []):
+                            if "lines" in block:
+                                for line in block["lines"]:
+                                    for span in line.get("spans", []):
+                                        text_blocks.append(span.get("text", ""))
+                        text = "\n".join(text_blocks)
+                    elif method == "html":
+                        html = page.get_text("html")
+                        # Simple HTML tag removal
+                        text = re.sub('<[^<]+?>', '', html)
+                        # Also handle HTML entities? We'll do a simple unescape for common ones
+                        text = text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"').replace("&#39;", "'")
+                    else:
+                        text = page.get_text()  # fallback
+                    
+                    if text and text.strip():
+                        # Score the text: prefer text with fewer placeholder characters (U+00B7)
+                        placeholder_count = text.count('·')
+                        total_chars = len(text)
+                        if total_chars > 0:
+                            # Score: higher is better (more non-placeholder chars)
+                            score = (total_chars - placeholder_count) * 2 - placeholder_count
+                        else:
+                            score = 0
+                        
+                        if score > best_score:
+                            best_score = score
+                            best_text = text
+                            best_method = method
+                            
+                except Exception as e:
+                    logger.debug(f"Extraction method {method} failed on page {page_num + 1}: {str(e)}")
+                    continue
+            
+            if best_text and best_text.strip():
+                full_text += best_text + "\n"
+                logger.debug(f"Page {page_num + 1} extracted {len(best_text)} chars using {best_method} method (score: {best_score})")
+            else:
+                logger.warning(f"Page {page_num + 1}: no text extracted with any method")
         
         if not full_text.strip():
             raise ValueError("PDF appears to be scanned or contains no extractable text. Try using OCR first.")
+        
+        logger.info(f"PDF extraction complete: {len(full_text)} chars")
+        logger.debug(f"Sample extracted text (first 500 chars): {repr(full_text[:500])}")
         
         chapters = self.detect_chapters(full_text, doc)
         return full_text, chapters

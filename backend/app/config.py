@@ -6,7 +6,9 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     API_PREFIX: str = "/api"
     
-    DATABASE_URL: str = "sqlite:///./data/audiobook.db"
+    # DATABASE_URL will be read from environment variable
+    # Default for local development if not set
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./data/audiobook.db")
     
     STORAGE_DIR: str = "app/storage"
     BOOKS_DIR: str = "app/storage/books"
@@ -18,9 +20,12 @@ class Settings(BaseSettings):
     
     TTS_SEGMENT_SIZE: int = 5000
     CHAPTER_FALLBACK_WORDS: int = 3000
-
+    
     MAX_RETRIES: int = 3
     RETRY_BASE_DELAY: float = 1.0
     RETRY_MAX_DELAY: float = 60.0
+    
+    # Logging configuration
+    LOG_LEVEL: str = "DEBUG"
 
 settings = Settings()

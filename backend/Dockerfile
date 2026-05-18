@@ -16,7 +16,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY app/ ./app/
 
 ENV PYTHONUNBUFFERED=1
-ENV DATABASE_URL=sqlite:///./data/audiobook.db
 
 RUN mkdir -p /app/app/storage/books /app/data
 

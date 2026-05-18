@@ -1,19 +1,33 @@
 version: '3.8'
 
 services:
+  db:
+    image: postgres:15-alpine
+    container_name: audiobook-db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=audiobook
+      - POSTGRES_PASSWORD=audiobook123
+      - POSTGRES_DB=audiobook
+    ports:
+      - "5433:5432"  # Changed from 5432:5432 to 5433:5432
+    restart: unless-stopped
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: audiobook-backend
     ports:
-      - "8000:8000"
+      - "8080:8000"  # Changed from 8000:8000 to 8080:8000
     volumes:
-      - audiobook-data:/app/data
       - audiobook-storage:/app/app/storage
     environment:
-      - DATABASE_URL=sqlite:///./data/audiobook.db
+      - DATABASE_URL=postgresql://audiobook:audiobook123@db:5432/audiobook
       - PYTHONUNBUFFERED=1
+    depends_on:
+      - db
     restart: unless-stopped
 
   frontend:
@@ -22,13 +36,12 @@ services:
       dockerfile: Dockerfile
     container_name: audiobook-frontend
     ports:
-      - "3000:3000"
+      - "3030:80"  # Changed from 3000:3000 to 3030:80 (frontend serves on port 80 via nginx)
     depends_on:
       - backend
     restart: unless-stopped
 
 volumes:
-  audiobook-data:
-    driver: local
+  postgres_data:
   audiobook-storage:
     driver: local
