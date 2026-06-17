@@ -1,4 +1,5 @@
 import re
+import html
 import fitz
 import logging
 from typing import List, Dict, Tuple, Optional
@@ -43,11 +44,9 @@ class PDFService:
                                         text_blocks.append(span.get("text", ""))
                         text = "\n".join(text_blocks)
                     elif method == "html":
-                        html = page.get_text("html")
-                        # Simple HTML tag removal
-                        text = re.sub('<[^<]+?>', '', html)
-                        # Also handle HTML entities? We'll do a simple unescape for common ones
-                        text = text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"').replace("&#39;", "'")
+                        raw_html = page.get_text("html")
+                        text = re.sub('<[^<]+?>', '', raw_html)
+                        text = html.unescape(text)
                     else:
                         text = page.get_text()  # fallback
                     
@@ -193,7 +192,47 @@ class PDFService:
         text = ""
         for page_num in range(start_page, min(end_page, doc.page_count)):
             page = doc[page_num]
-            text += page.get_text() + "\n"
+            page_text = ""
+            best_score = -1
+            
+            for method in ["html", "text", "blocks", "dict"]:
+                try:
+                    if method == "text":
+                        extracted = page.get_text(sort=True)
+                    elif method == "html":
+                        raw = page.get_text("html")
+                        extracted = re.sub('<[^<]+?>', '', raw)
+                        extracted = html.unescape(extracted)
+                    elif method == "blocks":
+                        blocks = page.get_text("blocks")
+                        extracted = "\n".join([block[4] for block in blocks if len(block) > 4 and block[4].strip()])
+                    elif method == "dict":
+                        text_dict = page.get_text("dict")
+                        text_blocks = []
+                        for block in text_dict.get("blocks", []):
+                            if "lines" in block:
+                                for line in block["lines"]:
+                                    for span in line.get("spans", []):
+                                        text_blocks.append(span.get("text", ""))
+                        extracted = "\n".join(text_blocks)
+                    else:
+                        extracted = page.get_text()
+                    
+                    if extracted and extracted.strip():
+                        placeholder_count = extracted.count('·')
+                        total_chars = len(extracted)
+                        if total_chars > 0:
+                            score = (total_chars - placeholder_count) * 2 - placeholder_count
+                        else:
+                            score = 0
+                        if score > best_score:
+                            best_score = score
+                            page_text = extracted
+                except Exception:
+                    continue
+            
+            if page_text:
+                text += page_text + "\n"
         
         return self.clean_text(text)
     

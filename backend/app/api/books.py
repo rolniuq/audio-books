@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
 from fastapi.exceptions import HTTPException as FastAPIHTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -32,12 +32,12 @@ tts_service = TTSService()
 @router.post("/upload", response_model=BookResponse)
 async def upload_book(
     file: UploadFile = File(...),
-    title: Optional[str] = None,
-    author: str = "Unknown",
-    language: str = "vi-VN",
-    voice: str = "vi-VN-HoaiMyNeural",
-    voice_id: Optional[str] = None,
-    auto_convert: bool = True,
+    title: Optional[str] = Form(None),
+    author: str = Form("Unknown"),
+    language: str = Form("vi-VN"),
+    voice: str = Form("vi-VN-HoaiMyNeural"),
+    voice_id: Optional[str] = Form(None),
+    auto_convert: bool = Form(True),
     background_tasks: BackgroundTasks = None,
     db: Session = Depends(get_db)
 ):

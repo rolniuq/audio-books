@@ -8,7 +8,7 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-TTS_TIMEOUT = 300  # 5 minutes max per chapter
+TTS_TIMEOUT = 600  # 10 minutes max per segment
 
 
 class TTSService:
@@ -128,13 +128,15 @@ class TTSService:
             try:
                 await self._synthesize_text(text, voice, output_file, rate, pitch)
                 return True
-            except asyncio.TimeoutError:
+            except asyncio.TimeoutError as e:
                 last_error = "TTS timeout"
                 logger.error(f"TTS timeout on attempt {attempt + 1}")
                 if attempt < self.max_retries - 1:
                     delay = self._get_retry_delay(attempt)
-                    logger.warning(f"TTS attempt {attempt + 1} timed out. Retrying in {delay:.1f}s...")
+                    logger.warning(f"TTS attempt {attempt + 1} timed out. Retrying in {delay:.1f}s (text len={len(text)})...")
                     await asyncio.sleep(delay)
+                else:
+                    raise  # Let outer timeout handle it
             except Exception as e:
                 last_error = str(e)
                 if attempt < self.max_retries - 1:

@@ -19,27 +19,28 @@ class BookService:
         self.tts_service = TTSService()
     
     def create_book_from_upload(self, db: Session, file: UploadFile, title: str, author: str, language: str, voice: str) -> Book:
-        os.makedirs(settings.BOOKS_DIR, exist_ok=True)
-        
-        book_dir = os.path.join(settings.BOOKS_DIR, f"book_{datetime.now().timestamp()}")
-        os.makedirs(book_dir, exist_ok=True)
-        
-        pdf_path = os.path.join(book_dir, file.filename)
-        
-        with open(pdf_path, "wb") as f:
-            content = file.file.read()
-            f.write(content)
-        
         book = Book(
             title=title,
             author=author,
             language=language,
             voice=voice,
-            pdf_path=pdf_path,
             status="pending",
             progress=0.0
         )
         db.add(book)
+        db.commit()
+        db.refresh(book)
+        
+        os.makedirs(settings.BOOKS_DIR, exist_ok=True)
+        book_dir = os.path.join(settings.BOOKS_DIR, f"book_{book.id}")
+        os.makedirs(book_dir, exist_ok=True)
+        
+        pdf_path = os.path.join(book_dir, file.filename)
+        with open(pdf_path, "wb") as f:
+            content = file.file.read()
+            f.write(content)
+        
+        book.pdf_path = pdf_path
         db.commit()
         db.refresh(book)
         
@@ -142,7 +143,7 @@ class BookService:
                     logger.warning(f"Chapter {chapter.chapter_number} retry {attempt}: {error}")
                 
                 text_length = len(chapter.content)
-                timeout_seconds = min(600, 60 + text_length // 50)
+                timeout_seconds = min(3600, 120 + text_length // 20)
                 
                 await asyncio.wait_for(
                     self.tts_service._convert_text_to_audio_async(
